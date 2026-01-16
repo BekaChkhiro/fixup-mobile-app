@@ -1,11 +1,33 @@
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/services/supabase';
+import { DEMO_SERVICES } from '@/constants/demoData';
 import type { MechanicService, ServiceFilters } from '@/types';
 
 const PAGE_SIZE = 20;
 
 interface FetchServicesParams extends ServiceFilters {
   page?: number;
+}
+
+// Filter demo services based on filters
+function filterDemoServices(filters: FetchServicesParams): MechanicService[] {
+  let filtered = [...DEMO_SERVICES];
+
+  if (filters.categoryId) {
+    filtered = filtered.filter(s => s.category_id === filters.categoryId);
+  }
+  if (filters.city) {
+    filtered = filtered.filter(s => s.city === filters.city);
+  }
+  if (filters.district) {
+    filtered = filtered.filter(s => s.district === filters.district);
+  }
+  if (filters.search) {
+    const searchLower = filters.search.toLowerCase();
+    filtered = filtered.filter(s => s.name.toLowerCase().includes(searchLower));
+  }
+
+  return filtered;
 }
 
 async function fetchServices({
@@ -15,51 +37,61 @@ async function fetchServices({
   search,
   page = 0,
 }: FetchServicesParams): Promise<MechanicService[]> {
-  let query = supabase
-    .from('mechanic_services')
-    .select(`
-      *,
-      profiles!fk_mechanic_services_profiles (
-        id,
-        full_name,
-        phone,
-        avatar_url
-      ),
-      mechanic_profiles (
-        id,
-        specialization,
-        experience_years,
-        rating,
-        review_count
-      ),
-      service_categories (*)
-    `)
-    .order('created_at', { ascending: false })
-    .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+  try {
+    let query = supabase
+      .from('mechanic_services')
+      .select(`
+        *,
+        profiles!fk_mechanic_services_profiles (
+          id,
+          full_name,
+          phone,
+          avatar_url
+        ),
+        mechanic_profiles (
+          id,
+          specialization,
+          experience_years,
+          rating,
+          review_count
+        ),
+        service_categories (*)
+      `)
+      .order('created_at', { ascending: false })
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
-  if (categoryId) {
-    query = query.eq('category_id', categoryId);
+    if (categoryId) {
+      query = query.eq('category_id', categoryId);
+    }
+
+    if (city) {
+      query = query.eq('city', city);
+    }
+
+    if (district) {
+      query = query.eq('district', district);
+    }
+
+    if (search) {
+      query = query.ilike('name', `%${search}%`);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.warn('Failed to fetch services from Supabase, using demo data:', error.message);
+      return filterDemoServices({ categoryId, city, district, search, page });
+    }
+
+    if (!data || data.length === 0) {
+      return filterDemoServices({ categoryId, city, district, search, page });
+    }
+
+    return data;
+  } catch (err) {
+    console.warn('Network error fetching services, using demo data:', err);
+    return filterDemoServices({ categoryId, city, district, search, page });
   }
-
-  if (city) {
-    query = query.eq('city', city);
-  }
-
-  if (district) {
-    query = query.eq('district', district);
-  }
-
-  if (search) {
-    query = query.ilike('name', `%${search}%`);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data || [];
 }
 
 interface UseServicesOptions {
@@ -92,35 +124,46 @@ export function useService(id: number) {
   return useQuery({
     queryKey: ['service', id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('mechanic_services')
-        .select(`
-          *,
-          profiles!fk_mechanic_services_profiles (
-            id,
-            full_name,
-            phone,
-            avatar_url
-          ),
-          mechanic_profiles (
-            id,
-            specialization,
-            experience_years,
-            rating,
-            review_count
-          ),
-          service_categories (*)
-        `)
-        .eq('id', id)
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from('mechanic_services')
+          .select(`
+            *,
+            profiles!fk_mechanic_services_profiles (
+              id,
+              full_name,
+              phone,
+              avatar_url
+            ),
+            mechanic_profiles (
+              id,
+              specialization,
+              experience_years,
+              rating,
+              review_count
+            ),
+            service_categories (*)
+          `)
+          .eq('id', id)
+          .single();
 
-      if (error) {
-        throw new Error(error.message);
+        if (error) {
+          console.warn('Failed to fetch service from Supabase, using demo data:', error.message);
+          const demoService = DEMO_SERVICES.find(s => s.id === id);
+          if (demoService) return demoService;
+          throw new Error(error.message);
+        }
+
+        return data as MechanicService;
+      } catch (err) {
+        console.warn('Network error fetching service, using demo data:', err);
+        const demoService = DEMO_SERVICES.find(s => s.id === id);
+        if (demoService) return demoService;
+        throw err;
       }
-
-      return data as MechanicService;
     },
     enabled: !!id,
+    retry: false,
   });
 }
 

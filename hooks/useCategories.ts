@@ -1,24 +1,38 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/services/supabase';
+import { DEMO_CATEGORIES } from '@/constants/demoData';
 import type { ServiceCategory } from '@/types';
 
 async function fetchCategories(): Promise<ServiceCategory[]> {
-  const { data, error } = await supabase
-    .from('service_categories')
-    .select('*')
-    .order('name');
+  try {
+    const { data, error } = await supabase
+      .from('service_categories')
+      .select('*')
+      .order('name');
 
-  if (error) {
-    throw new Error(error.message);
+    if (error) {
+      console.warn('Failed to fetch categories from Supabase, using demo data:', error.message);
+      return DEMO_CATEGORIES;
+    }
+
+    // If data is empty, use demo data
+    if (!data || data.length === 0) {
+      return DEMO_CATEGORIES;
+    }
+
+    return data;
+  } catch (err) {
+    console.warn('Network error fetching categories, using demo data:', err);
+    return DEMO_CATEGORIES;
   }
-
-  return data || [];
 }
 
 export function useCategories() {
   return useQuery({
     queryKey: ['categories'],
     queryFn: fetchCategories,
+    // Don't retry on failure since we have fallback data
+    retry: false,
   });
 }
 

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/services/supabase';
+import { DEMO_FUEL_IMPORTERS } from '@/constants/demoData';
 import type { FuelImporter } from '@/types';
 
 const FUEL_API_BASE = 'https://fuel-prices-backend.onrender.com';
@@ -80,16 +81,26 @@ async function fetchFromApi(): Promise<FuelImporter[]> {
 
 // Fallback to Supabase
 async function fetchFromSupabase(): Promise<FuelImporter[]> {
-  const { data, error } = await supabase
-    .from('fuel_importers')
-    .select('*')
-    .order('name');
+  try {
+    const { data, error } = await supabase
+      .from('fuel_importers')
+      .select('*')
+      .order('name');
 
-  if (error) {
-    throw new Error(error.message);
+    if (error) {
+      console.warn('Failed to fetch fuel importers from Supabase, using demo data:', error.message);
+      return DEMO_FUEL_IMPORTERS;
+    }
+
+    if (!data || data.length === 0) {
+      return DEMO_FUEL_IMPORTERS;
+    }
+
+    return data;
+  } catch (err) {
+    console.warn('Network error fetching fuel importers, using demo data:', err);
+    return DEMO_FUEL_IMPORTERS;
   }
-
-  return data || [];
 }
 
 // Main fetch function with fallback
@@ -104,7 +115,7 @@ async function fetchFuelImporters(): Promise<FuelImporter[]> {
     // API failed, fall back to Supabase
   }
 
-  // Fallback to Supabase
+  // Fallback to Supabase (which has its own fallback to demo data)
   return fetchFromSupabase();
 }
 

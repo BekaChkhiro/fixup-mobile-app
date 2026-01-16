@@ -18,7 +18,8 @@
       "bundleIdentifier": "ge.fixmyride.app",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app uses your location to show nearby services on the map.",
-        "NSLocationAlwaysUsageDescription": "This app uses your location to show nearby services on the map."
+        "NSLocationAlwaysUsageDescription": "This app uses your location to show nearby services on the map.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
