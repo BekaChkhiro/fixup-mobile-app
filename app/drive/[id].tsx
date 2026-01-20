@@ -19,10 +19,11 @@ import {
   callPhone,
   openInMaps,
   shareDrive,
+  getImageHeight,
 } from '@/utils';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const IMAGE_HEIGHT = 250;
+const IMAGE_HEIGHT = getImageHeight();
 
 export default function DriveDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();

@@ -1,6 +1,6 @@
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/services/supabase';
-import { DEMO_SERVICES } from '@/constants/demoData';
+import { DEMO_SERVICES, getDemoServicesForMap } from '@/constants/demoData';
 import type { MechanicService, ServiceFilters } from '@/types';
 
 const PAGE_SIZE = 20;
@@ -172,44 +172,54 @@ export function useServicesForMap(filters: ServiceFilters = {}) {
   return useQuery({
     queryKey: ['services', 'map', filters],
     queryFn: async () => {
-      let query = supabase
-        .from('mechanic_services')
-        .select(`
-          id,
-          name,
-          latitude,
-          longitude,
-          address,
-          rating,
-          photos,
-          category_id
-        `);
+      try {
+        let query = supabase
+          .from('mechanic_services')
+          .select(`
+            id,
+            name,
+            latitude,
+            longitude,
+            address,
+            rating,
+            photos,
+            category_id
+          `);
 
-      // Support single or multiple category IDs
-      if (filters.categoryIds && filters.categoryIds.length > 0) {
-        query = query.in('category_id', filters.categoryIds);
-      } else if (filters.categoryId) {
-        query = query.eq('category_id', filters.categoryId);
+        // Support single or multiple category IDs
+        if (filters.categoryIds && filters.categoryIds.length > 0) {
+          query = query.in('category_id', filters.categoryIds);
+        } else if (filters.categoryId) {
+          query = query.eq('category_id', filters.categoryId);
+        }
+
+        // Support single or multiple cities
+        if (filters.cities && filters.cities.length > 0) {
+          query = query.in('city', filters.cities);
+        } else if (filters.city) {
+          query = query.eq('city', filters.city);
+        }
+
+        if (filters.district) {
+          query = query.eq('district', filters.district);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+          console.warn('Failed to fetch services for map, using demo data:', error.message);
+          return getDemoServicesForMap();
+        }
+
+        if (!data || data.length === 0) {
+          return getDemoServicesForMap();
+        }
+
+        return data;
+      } catch (err) {
+        console.warn('Network error fetching services for map, using demo data:', err);
+        return getDemoServicesForMap();
       }
-
-      // Support single or multiple cities
-      if (filters.cities && filters.cities.length > 0) {
-        query = query.in('city', filters.cities);
-      } else if (filters.city) {
-        query = query.eq('city', filters.city);
-      }
-
-      if (filters.district) {
-        query = query.eq('district', filters.district);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      return data || [];
     },
   });
 }

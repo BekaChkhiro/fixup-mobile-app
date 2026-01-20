@@ -15,11 +15,18 @@ import MapView, { Marker, Region, PROVIDER_GOOGLE, Polyline } from 'react-native
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import { useQuery } from '@tanstack/react-query';
 import { colors, spacing, borderRadius, typography } from '@/constants';
 import { defaultRegion, zoomLevels } from '@/constants/mapConfig';
-import { useServicesForMap, useLaundriesForMap, useDrivesForMap, useLocation, useLayoutConfig } from '@/hooks';
-import { supabase } from '@/services/supabase';
+import {
+  useServicesForMap,
+  useLaundriesForMap,
+  useDrivesForMap,
+  useLocation,
+  useLayoutConfig,
+  useCitiesForMap,
+  useCategoriesForMap,
+} from '@/hooks';
+import { getBottomOffset, getMapEdgePadding } from '@/utils';
 import type { MapItemType } from '@/types';
 
 // Filter state type
@@ -65,67 +72,6 @@ const markerIcons: Record<MapItemType, keyof typeof Ionicons.glyphMap> = {
   laundry: 'water',
   drive: 'car',
 };
-
-// Inline hook for cities (based on active tab)
-function useCitiesForMap(type: MapItemType) {
-  return useQuery({
-    queryKey: ['map-cities', type],
-    queryFn: async () => {
-      const table = type === 'service' ? 'mechanic_services' : type === 'laundry' ? 'laundries' : 'drives';
-      const { data, error } = await supabase
-        .from(table)
-        .select('city')
-        .not('city', 'is', null);
-
-      if (error) throw error;
-
-      const uniqueCities = [...new Set(data?.map((d: any) => d.city).filter(Boolean))] as string[];
-      return uniqueCities.sort();
-    },
-  });
-}
-
-// Inline hook for districts
-function useDistrictsForMap(type: MapItemType, city?: string) {
-  return useQuery({
-    queryKey: ['map-districts', type, city],
-    queryFn: async () => {
-      const table = type === 'service' ? 'mechanic_services' : type === 'laundry' ? 'laundries' : 'drives';
-      let query = supabase
-        .from(table)
-        .select('district')
-        .not('district', 'is', null);
-
-      if (city) {
-        query = query.eq('city', city);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      const uniqueDistricts = [...new Set(data?.map((d: any) => d.district).filter(Boolean))] as string[];
-      return uniqueDistricts.sort();
-    },
-    enabled: !!city,
-  });
-}
-
-// Inline hook for service categories
-function useCategoriesForMap() {
-  return useQuery({
-    queryKey: ['map-categories'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('service_categories')
-        .select('id, name')
-        .order('name');
-
-      if (error) throw error;
-      return data || [];
-    },
-  });
-}
 
 // Category type for filter
 interface CategoryOption {
@@ -585,13 +531,36 @@ export default function MapScreen() {
       } else if (coordinates.length > 1) {
         // Multiple markers - fit to show all
         mapRef.current.fitToCoordinates(coordinates, {
-          edgePadding: { top: 100, right: 50, bottom: 200, left: 50 },
+          edgePadding: getMapEdgePadding(),
           animated: true,
         });
       }
       setPendingCityZoom(null);
     }
   }, [pendingCityZoom, markersData, isLoading]);
+
+  // Driving distance calculation with OSRM API - defined before handleMarkerPress
+  const fetchDrivingDistance = useCallback(async (
+    from: { latitude: number; longitude: number },
+    to: { latitude: number; longitude: number }
+  ) => {
+    setIsLoadingDistance(true);
+    setDrivingDistance(null);
+    try {
+      const url = `https://router.project-osrm.org/route/v1/driving/${from.longitude},${from.latitude};${to.longitude},${to.latitude}?overview=false`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.code === 'Ok' && data.routes?.[0]?.distance) {
+        // distance is in meters, convert to km
+        setDrivingDistance(data.routes[0].distance / 1000);
+      }
+    } catch (error) {
+      console.log('Distance fetch error:', error);
+    } finally {
+      setIsLoadingDistance(false);
+    }
+  }, []);
 
   // Handle marker press
   const handleMarkerPress = useCallback(
@@ -713,30 +682,7 @@ export default function MapScreen() {
     return markersData.find((item: any) => item.id === selectedId);
   }, [selectedId, markersData]);
 
-  // გზის მანძილის გამოთვლა OSRM API-დან
-  const fetchDrivingDistance = useCallback(async (
-    from: { latitude: number; longitude: number },
-    to: { latitude: number; longitude: number }
-  ) => {
-    setIsLoadingDistance(true);
-    setDrivingDistance(null);
-    try {
-      const url = `https://router.project-osrm.org/route/v1/driving/${from.longitude},${from.latitude};${to.longitude},${to.latitude}?overview=false`;
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (data.code === 'Ok' && data.routes?.[0]?.distance) {
-        // distance is in meters, convert to km
-        setDrivingDistance(data.routes[0].distance / 1000);
-      }
-    } catch (error) {
-      console.log('Distance fetch error:', error);
-    } finally {
-      setIsLoadingDistance(false);
-    }
-  }, []);
-
-  // მარშრუტის მიღება OSRM API-დან
+  // Route fetching with OSRM API
   const fetchRoute = useCallback(async (
     from: { latitude: number; longitude: number },
     to: { latitude: number; longitude: number }
@@ -806,7 +752,7 @@ export default function MapScreen() {
       mapRef.current.fitToCoordinates(
         [userLocation, { latitude: selectedItem.latitude, longitude: selectedItem.longitude }],
         {
-          edgePadding: { top: 100, right: 50, bottom: 200, left: 50 },
+          edgePadding: getMapEdgePadding(),
           animated: true,
         }
       );
@@ -1077,7 +1023,7 @@ export default function MapScreen() {
 
       {/* Selected Item Card */}
       {selectedItem && (
-        <View style={styles.selectedCard}>
+        <View style={[styles.selectedCard, { bottom: getBottomOffset() }]}>
           <TouchableOpacity
             style={styles.selectedCardContent}
             onPress={() => handleItemPress(selectedItem.id)}
@@ -1173,7 +1119,7 @@ export default function MapScreen() {
 
       {/* Empty state hint */}
       {!isLoading && markersData.length === 0 && (
-        <View style={styles.emptyHint}>
+        <View style={[styles.emptyHint, { bottom: getBottomOffset() }]}>
           <Ionicons name="information-circle" size={20} color={colors.gray[500]} />
           <Text style={styles.emptyHintText}>
             {activeTab === 'service' && 'სერვისები არ მოიძებნა'}

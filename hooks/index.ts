@@ -16,3 +16,4 @@ export { useLaundries, useInfiniteLaundries, useLaundry, useLaundriesForMap } fr
 export { useDrives, useInfiniteDrives, useDrive, useDrivesForMap } from './useDrives';
 export { useFuelImporters, useCheapestFuelPrices } from './useFuelImporters';
 export { useLayoutConfig } from './useLayoutConfig';
+export { useCitiesForMap, useDistrictsForMap, useCategoriesForMap } from './useMapFilters';

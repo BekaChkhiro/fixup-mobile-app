@@ -146,7 +146,7 @@ export function MapBottomSheet({
 
       <BottomSheetFlatList
         data={items}
-        keyExtractor={(item) => `${type}-${item.id}`}
+        keyExtractor={(item: MapItem) => `${type}-${item.id}`}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}

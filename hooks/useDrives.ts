@@ -1,6 +1,6 @@
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/services/supabase';
-import { DEMO_DRIVES } from '@/constants/demoData';
+import { DEMO_DRIVES, getDemoDrivesForMap } from '@/constants/demoData';
 import type { Drive, DriveFilters } from '@/types';
 
 const PAGE_SIZE = 20;
@@ -109,28 +109,38 @@ export function useDrivesForMap(filters: DriveFilters = {}) {
   return useQuery({
     queryKey: ['drives', 'map', filters],
     queryFn: async () => {
-      let query = supabase
-        .from('drives')
-        .select('id, name, latitude, longitude, address, photos');
+      try {
+        let query = supabase
+          .from('drives')
+          .select('id, name, latitude, longitude, address, photos');
 
-      // Support single or multiple cities
-      if (filters.cities && filters.cities.length > 0) {
-        query = query.in('city', filters.cities);
-      } else if (filters.city) {
-        query = query.eq('city', filters.city);
+        // Support single or multiple cities
+        if (filters.cities && filters.cities.length > 0) {
+          query = query.in('city', filters.cities);
+        } else if (filters.city) {
+          query = query.eq('city', filters.city);
+        }
+
+        if (filters.district) {
+          query = query.eq('district', filters.district);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+          console.warn('Failed to fetch drives for map, using demo data:', error.message);
+          return getDemoDrivesForMap();
+        }
+
+        if (!data || data.length === 0) {
+          return getDemoDrivesForMap();
+        }
+
+        return data;
+      } catch (err) {
+        console.warn('Network error fetching drives for map, using demo data:', err);
+        return getDemoDrivesForMap();
       }
-
-      if (filters.district) {
-        query = query.eq('district', filters.district);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      return data || [];
     },
   });
 }

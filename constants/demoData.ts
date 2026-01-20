@@ -1,4 +1,4 @@
-import type { ServiceCategory, MechanicService, Laundry, Drive, FuelImporter } from '@/types';
+import type { ServiceCategory, MechanicService, MechanicProfile, Profile, Laundry, Drive, FuelImporter } from '@/types';
 
 // Demo categories for fallback when Supabase is unavailable
 export const DEMO_CATEGORIES: ServiceCategory[] = [
@@ -68,11 +68,76 @@ export const DEMO_CATEGORIES: ServiceCategory[] = [
   },
 ];
 
+// Demo cities for fallback
+export const DEMO_CITIES: string[] = [
+  'თბილისი',
+  'ბათუმი',
+  'ქუთაისი',
+  'რუსთავი',
+  'გორი',
+  'ზუგდიდი',
+  'ფოთი',
+  'თელავი',
+];
+
+// Demo districts by city for fallback
+export const DEMO_DISTRICTS: Record<string, string[]> = {
+  'თბილისი': [
+    'ვაკე',
+    'საბურთალო',
+    'დიდუბე',
+    'გლდანი',
+    'ნაძალადევი',
+    'ისანი',
+    'სამგორი',
+    'ვარკეთილი',
+    'კრწანისი',
+    'მთაწმინდა',
+  ],
+  'ბათუმი': [
+    'ძველი ბათუმი',
+    'ახალი ბათუმი',
+    'ხელვაჩაური',
+  ],
+  'ქუთაისი': [
+    'ცენტრი',
+    'ბალახვანი',
+    'რიონი',
+  ],
+  'რუსთავი': [
+    'ცენტრი',
+    'მე-3 მიკრო',
+    'მე-4 მიკრო',
+  ],
+};
+
+// Demo mechanic profile for fallback
+export const DEMO_MECHANIC_PROFILE: MechanicProfile & { profiles: Profile } = {
+  id: 'demo-mechanic-1',
+  description: 'პროფესიონალი მექანიკოსი 15 წლიანი გამოცდილებით. სპეციალიზაცია: ევროპული და იაპონური ავტომობილები.',
+  specialization: 'ევროპული და იაპონური ავტომობილები',
+  experience_years: 15,
+  hourly_rate: 50,
+  is_mobile: true,
+  rating: 4.8,
+  review_count: 124,
+  working_hours: '09:00 - 19:00',
+  accepts_card_payment: true,
+  profiles: {
+    id: 'demo-mechanic-1',
+    full_name: 'გიორგი მექანიკოსი',
+    phone: '+995599123456',
+    avatar_url: null,
+    city: 'თბილისი',
+    district: 'საბურთალო',
+  },
+};
+
 // Demo services for fallback
 export const DEMO_SERVICES: MechanicService[] = [
   {
     id: 1,
-    mechanic_id: 'demo-1',
+    mechanic_id: 'demo-mechanic-1',
     category_id: 1,
     name: 'ძრავის კაპიტალური შეკეთება',
     description: 'სრული ძრავის აღდგენა და შეკეთება პროფესიონალი ოსტატების მიერ',
@@ -95,7 +160,7 @@ export const DEMO_SERVICES: MechanicService[] = [
     is_active: true,
     created_at: new Date().toISOString(),
     profiles: {
-      id: 'demo-1',
+      id: 'demo-mechanic-1',
       full_name: 'გიორგი მექანიკოსი',
       phone: '+995599123456',
       avatar_url: null,
@@ -105,7 +170,7 @@ export const DEMO_SERVICES: MechanicService[] = [
   },
   {
     id: 2,
-    mechanic_id: 'demo-2',
+    mechanic_id: 'demo-mechanic-2',
     category_id: 3,
     name: 'სამუხრუჭე სისტემის შეკეთება',
     description: 'მუხრუჭების შემოწმება და გამოცვლა',
@@ -128,12 +193,78 @@ export const DEMO_SERVICES: MechanicService[] = [
     is_active: true,
     created_at: new Date().toISOString(),
     profiles: {
-      id: 'demo-2',
+      id: 'demo-mechanic-2',
       full_name: 'ავტო სერვისი',
       phone: '+995599654321',
       avatar_url: null,
       city: 'თბილისი',
       district: 'ვაკე',
+    },
+  },
+  {
+    id: 3,
+    mechanic_id: 'demo-mechanic-1',
+    category_id: 6,
+    name: 'ზეთის გამოცვლა',
+    description: 'ზეთის და ფილტრების გამოცვლა ყველა მარკის ავტომობილისთვის',
+    price_from: 30,
+    price_to: 80,
+    estimated_hours: 1,
+    city: 'თბილისი',
+    district: 'დიდუბე',
+    address: 'წერეთლის გამზირი 50',
+    latitude: 41.7280,
+    longitude: 44.7750,
+    car_brands: null,
+    on_site_service: true,
+    accepts_card_payment: true,
+    accepts_cash_payment: true,
+    photos: null,
+    videos: null,
+    rating: 4.6,
+    review_count: 210,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    profiles: {
+      id: 'demo-mechanic-1',
+      full_name: 'გიორგი მექანიკოსი',
+      phone: '+995599123456',
+      avatar_url: null,
+      city: 'თბილისი',
+      district: 'საბურთალო',
+    },
+  },
+  {
+    id: 4,
+    mechanic_id: 'demo-mechanic-3',
+    category_id: 8,
+    name: 'კომპიუტერული დიაგნოსტიკა',
+    description: 'ავტომობილის სრული კომპიუტერული დიაგნოსტიკა თანამედროვე აპარატურით',
+    price_from: 20,
+    price_to: 50,
+    estimated_hours: 1,
+    city: 'ბათუმი',
+    district: 'ძველი ბათუმი',
+    address: 'რუსთაველის 25',
+    latitude: 41.6458,
+    longitude: 41.6419,
+    car_brands: null,
+    on_site_service: false,
+    accepts_card_payment: true,
+    accepts_cash_payment: true,
+    photos: null,
+    videos: null,
+    rating: 4.9,
+    review_count: 56,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    profiles: {
+      id: 'demo-mechanic-3',
+      full_name: 'ბათუმი ავტო დიაგნოსტიკა',
+      phone: '+995599999888',
+      avatar_url: null,
+      city: 'ბათუმი',
+      district: 'ძველი ბათუმი',
     },
   },
 ];
@@ -172,6 +303,22 @@ export const DEMO_LAUNDRIES: Laundry[] = [
     review_count: 128,
     created_at: new Date().toISOString(),
   },
+  {
+    id: 3,
+    name: 'ავტო რეცხვა პლუს',
+    description: 'ხელით რეცხვა და პოლირება',
+    city: 'თბილისი',
+    district: 'ვაკე',
+    address: 'ჭავჭავაძის 80',
+    latitude: 41.7120,
+    longitude: 44.7550,
+    phone: '+995599444555',
+    working_hours: '09:00 - 20:00',
+    photos: null,
+    rating: 4.5,
+    review_count: 89,
+    created_at: new Date().toISOString(),
+  },
 ];
 
 // Demo drives for fallback
@@ -199,6 +346,19 @@ export const DEMO_DRIVES: Drive[] = [
     latitude: 41.6890,
     longitude: 44.8321,
     phone: '+995599777888',
+    photos: null,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 3,
+    name: 'ევროპული ავტო ნაწილები',
+    description: 'BMW, Mercedes, Audi ნაწილები',
+    city: 'თბილისი',
+    district: 'საბურთალო',
+    address: 'პეკინის 45',
+    latitude: 41.7200,
+    longitude: 44.7600,
+    phone: '+995599888999',
     photos: null,
     created_at: new Date().toISOString(),
   },
@@ -251,3 +411,53 @@ export const DEMO_FUEL_IMPORTERS: FuelImporter[] = [
     updated_at: new Date().toISOString(),
   },
 ];
+
+// Helper function to get demo services for map (only those with coordinates)
+export function getDemoServicesForMap() {
+  return DEMO_SERVICES
+    .filter(s => s.latitude !== null && s.longitude !== null)
+    .map(s => ({
+      id: s.id,
+      name: s.name,
+      latitude: s.latitude,
+      longitude: s.longitude,
+      address: s.address,
+      rating: s.rating,
+      photos: s.photos,
+      category_id: s.category_id,
+    }));
+}
+
+// Helper function to get demo laundries for map (only those with coordinates)
+export function getDemoLaundriesForMap() {
+  return DEMO_LAUNDRIES
+    .filter(l => l.latitude !== null && l.longitude !== null)
+    .map(l => ({
+      id: l.id,
+      name: l.name,
+      latitude: l.latitude,
+      longitude: l.longitude,
+      address: l.address,
+      rating: l.rating,
+      photos: l.photos,
+    }));
+}
+
+// Helper function to get demo drives for map (only those with coordinates)
+export function getDemoDrivesForMap() {
+  return DEMO_DRIVES
+    .filter(d => d.latitude !== null && d.longitude !== null)
+    .map(d => ({
+      id: d.id,
+      name: d.name,
+      latitude: d.latitude,
+      longitude: d.longitude,
+      address: d.address,
+      photos: d.photos,
+    }));
+}
+
+// Helper function to get demo mechanic services by mechanic id
+export function getDemoMechanicServices(mechanicId: string) {
+  return DEMO_SERVICES.filter(s => s.mechanic_id === mechanicId);
+}

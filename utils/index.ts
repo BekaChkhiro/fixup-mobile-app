@@ -9,3 +9,13 @@ export {
   formatDate,
   formatFuelPrice,
 } from './formatters';
+export {
+  isTablet,
+  getResponsiveValue,
+  getBottomOffset,
+  getImageHeight,
+  getGridColumns,
+  getMapEdgePadding,
+  getCardWidth,
+  scaleSize,
+} from './responsive';

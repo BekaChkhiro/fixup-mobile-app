@@ -7,17 +7,29 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "@supabase-url",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "@supabase-anon-key"
+      },
       "android": {
         "gradleCommand": ":app:assembleDebug"
       }
     },
     "preview": {
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "@supabase-url",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "@supabase-anon-key"
+      },
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "@supabase-url",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "@supabase-anon-key"
+      },
       "android": {
         "buildType": "app-bundle"
       },

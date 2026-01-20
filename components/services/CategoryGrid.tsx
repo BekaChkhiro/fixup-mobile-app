@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, StyleSheet, FlatList, RefreshControl } from 'react-native';
+import { View, StyleSheet, FlatList, RefreshControl, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CategoryCard } from './CategoryCard';
 import { SkeletonCard } from '@/components/ui';
-import { EmptyState, ErrorState, LoadingState } from '@/components/common';
+import { EmptyState, ErrorState } from '@/components/common';
 import { colors, spacing } from '@/constants';
+import { getGridColumns } from '@/utils';
 import type { ServiceCategory } from '@/types';
 
 interface CategoryGridProps {
@@ -25,17 +26,27 @@ export function CategoryGrid({
   isRefreshing = false,
 }: CategoryGridProps) {
   const router = useRouter();
+  // Use window dimensions to trigger re-render on orientation change
+  const { width } = useWindowDimensions();
+  const numColumns = getGridColumns();
 
   if (isLoading && !categories?.length) {
+    const skeletonItems = Array.from({ length: numColumns * 2 }, (_, i) => i);
     return (
       <View style={styles.loadingContainer}>
-        <View style={styles.row}>
-          <View style={styles.skeletonItem}><SkeletonCard /></View>
-          <View style={styles.skeletonItem}><SkeletonCard /></View>
+        <View style={styles.skeletonRow}>
+          {skeletonItems.slice(0, numColumns).map((i) => (
+            <View key={i} style={[styles.skeletonItem, { flex: 1 / numColumns }]}>
+              <SkeletonCard />
+            </View>
+          ))}
         </View>
-        <View style={styles.row}>
-          <View style={styles.skeletonItem}><SkeletonCard /></View>
-          <View style={styles.skeletonItem}><SkeletonCard /></View>
+        <View style={styles.skeletonRow}>
+          {skeletonItems.slice(numColumns, numColumns * 2).map((i) => (
+            <View key={i} style={[styles.skeletonItem, { flex: 1 / numColumns }]}>
+              <SkeletonCard />
+            </View>
+          ))}
         </View>
       </View>
     );
@@ -65,9 +76,10 @@ export function CategoryGrid({
 
   return (
     <FlatList
+      key={`grid-${numColumns}`} // Force re-render when columns change
       data={categories}
       keyExtractor={(item) => item.id.toString()}
-      numColumns={2}
+      numColumns={numColumns}
       columnWrapperStyle={styles.row}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
@@ -82,7 +94,7 @@ export function CategoryGrid({
         ) : undefined
       }
       renderItem={({ item }) => (
-        <View style={styles.item}>
+        <View style={[styles.item, { flex: 1 / numColumns }]}>
           <CategoryCard
             category={item}
             onPress={() => handleCategoryPress(item)}
@@ -98,18 +110,21 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   row: {
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     marginBottom: spacing.md,
   },
   item: {
-    flex: 1,
-    marginHorizontal: spacing.xs,
+    paddingHorizontal: spacing.xs,
   },
   loadingContainer: {
     padding: spacing.md,
   },
+  skeletonRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    marginBottom: spacing.md,
+  },
   skeletonItem: {
-    flex: 1,
-    marginHorizontal: spacing.xs,
+    paddingHorizontal: spacing.xs,
   },
 });

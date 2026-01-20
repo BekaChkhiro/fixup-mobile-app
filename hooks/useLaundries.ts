@@ -1,6 +1,6 @@
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/services/supabase';
-import { DEMO_LAUNDRIES } from '@/constants/demoData';
+import { DEMO_LAUNDRIES, getDemoLaundriesForMap } from '@/constants/demoData';
 import type { Laundry, LaundryFilters } from '@/types';
 
 const PAGE_SIZE = 20;
@@ -109,28 +109,38 @@ export function useLaundriesForMap(filters: LaundryFilters = {}) {
   return useQuery({
     queryKey: ['laundries', 'map', filters],
     queryFn: async () => {
-      let query = supabase
-        .from('laundries')
-        .select('id, name, latitude, longitude, address, photos');
+      try {
+        let query = supabase
+          .from('laundries')
+          .select('id, name, latitude, longitude, address, rating, photos');
 
-      // Support single or multiple cities
-      if (filters.cities && filters.cities.length > 0) {
-        query = query.in('city', filters.cities);
-      } else if (filters.city) {
-        query = query.eq('city', filters.city);
+        // Support single or multiple cities
+        if (filters.cities && filters.cities.length > 0) {
+          query = query.in('city', filters.cities);
+        } else if (filters.city) {
+          query = query.eq('city', filters.city);
+        }
+
+        if (filters.district) {
+          query = query.eq('district', filters.district);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+          console.warn('Failed to fetch laundries for map, using demo data:', error.message);
+          return getDemoLaundriesForMap();
+        }
+
+        if (!data || data.length === 0) {
+          return getDemoLaundriesForMap();
+        }
+
+        return data;
+      } catch (err) {
+        console.warn('Network error fetching laundries for map, using demo data:', err);
+        return getDemoLaundriesForMap();
       }
-
-      if (filters.district) {
-        query = query.eq('district', filters.district);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      return data || [];
     },
   });
 }
