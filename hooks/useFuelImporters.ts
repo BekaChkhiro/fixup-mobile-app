@@ -55,28 +55,37 @@ function transformApiResponse(apiData: ApiPriceResponse[]): FuelImporter[] {
     });
 }
 
-// Fetch from external API
+// Fetch from external API - parallel requests for speed
 async function fetchFromApi(): Promise<FuelImporter[]> {
-  const results: ApiPriceResponse[] = [];
-
-  // Fetch each company individually, don't fail if one fails
-  for (const company of SUPPORTED_COMPANIES) {
+  // Fetch all companies in parallel
+  const promises = SUPPORTED_COMPANIES.map(async (company) => {
     try {
-      const response = await fetch(`${FUEL_API_BASE}/api/fuel-prices/${company}`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout per request
+
+      const response = await fetch(`${FUEL_API_BASE}/api/fuel-prices/${company}`, {
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
       if (response.ok) {
-        const data = await response.json();
-        results.push(data);
+        return await response.json() as ApiPriceResponse;
       }
+      return null;
     } catch (error) {
       // Silently ignore individual company failures
+      return null;
     }
-  }
+  });
 
-  if (results.length === 0) {
+  const results = await Promise.all(promises);
+  const validResults = results.filter((r): r is ApiPriceResponse => r !== null);
+
+  if (validResults.length === 0) {
     throw new Error('No data from API');
   }
 
-  return transformApiResponse(results);
+  return transformApiResponse(validResults);
 }
 
 // Fallback to Supabase
@@ -103,16 +112,26 @@ async function fetchFromSupabase(): Promise<FuelImporter[]> {
   }
 }
 
+// Race with timeout helper
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout')), ms)
+    ),
+  ]);
+}
+
 // Main fetch function with fallback
 async function fetchFuelImporters(): Promise<FuelImporter[]> {
   try {
-    // Try external API first
-    const apiData = await fetchFromApi();
+    // Try external API first with 8 second total timeout
+    const apiData = await withTimeout(fetchFromApi(), 8000);
     if (apiData.length > 0) {
       return apiData;
     }
   } catch (error) {
-    // API failed, fall back to Supabase
+    // API failed or timed out, fall back to Supabase
   }
 
   // Fallback to Supabase (which has its own fallback to demo data)
@@ -124,34 +143,37 @@ export function useFuelImporters() {
     queryKey: ['fuel-importers'],
     queryFn: fetchFuelImporters,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
+    placeholderData: DEMO_FUEL_IMPORTERS, // Show demo data instantly while loading
+    refetchOnWindowFocus: false, // Don't refetch when app comes to foreground
   });
 }
 
-// Get cheapest prices across all importers
+// Helper to calculate cheapest prices from importers data
+function calculateCheapestPrices(data: FuelImporter[] | undefined) {
+  if (!data || data.length === 0) {
+    return null;
+  }
+
+  const getPrices = (arr: (number | null)[]) => arr.filter((p): p is number => p !== null && p > 0);
+
+  const regularPrices = getPrices(data.map(d => d.regular_ron_93_price));
+  const premiumPrices = getPrices(data.map(d => d.premium_ron_96_price));
+  const superPrices = getPrices(data.map(d => d.super_ron_98_price));
+  const dieselPrices = getPrices(data.map(d => d.diesel_price));
+
+  return {
+    regular: regularPrices.length > 0 ? Math.min(...regularPrices) : 0,
+    premium: premiumPrices.length > 0 ? Math.min(...premiumPrices) : 0,
+    super: superPrices.length > 0 ? Math.min(...superPrices) : 0,
+    diesel: dieselPrices.length > 0 ? Math.min(...dieselPrices) : 0,
+  };
+}
+
+// Get cheapest prices - derives from useFuelImporters data (no duplicate fetch)
 export function useCheapestFuelPrices() {
-  return useQuery({
-    queryKey: ['fuel-importers', 'cheapest'],
-    queryFn: async () => {
-      const data = await fetchFuelImporters();
-
-      if (!data || data.length === 0) {
-        return null;
-      }
-
-      const getPrices = (arr: (number | null)[]) => arr.filter((p): p is number => p !== null && p > 0);
-
-      const regularPrices = getPrices(data.map(d => d.regular_ron_93_price));
-      const premiumPrices = getPrices(data.map(d => d.premium_ron_96_price));
-      const superPrices = getPrices(data.map(d => d.super_ron_98_price));
-      const dieselPrices = getPrices(data.map(d => d.diesel_price));
-
-      return {
-        regular: regularPrices.length > 0 ? Math.min(...regularPrices) : 0,
-        premium: premiumPrices.length > 0 ? Math.min(...premiumPrices) : 0,
-        super: superPrices.length > 0 ? Math.min(...superPrices) : 0,
-        diesel: dieselPrices.length > 0 ? Math.min(...dieselPrices) : 0,
-      };
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
+  const { data } = useFuelImporters();
+  return {
+    data: calculateCheapestPrices(data),
+  };
 }
