@@ -40,18 +40,29 @@ export function useCategoryById(id: number | undefined) {
   return useQuery({
     queryKey: ['category', id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('service_categories')
-        .select('*')
-        .eq('id', id)
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from('service_categories')
+          .select('*')
+          .eq('id', id)
+          .single();
 
-      if (error) {
-        throw new Error(error.message);
+        if (error) {
+          console.warn('Failed to fetch category, using demo data:', error.message);
+          const demoCategory = DEMO_CATEGORIES.find(c => c.id === id);
+          if (demoCategory) return demoCategory;
+          return DEMO_CATEGORIES[0];
+        }
+
+        return data as ServiceCategory;
+      } catch (err) {
+        console.warn('Network error fetching category, using demo data:', err);
+        const demoCategory = DEMO_CATEGORIES.find(c => c.id === id);
+        if (demoCategory) return demoCategory;
+        return DEMO_CATEGORIES[0];
       }
-
-      return data as ServiceCategory;
     },
     enabled: !!id,
+    retry: false,
   });
 }
