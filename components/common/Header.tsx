@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography } from '@/constants';
 
-const logo = require('@/assets/fixup.png');
+const logo = require('../../assets/fixup.png');
 
 interface HeaderProps {
   title: string;

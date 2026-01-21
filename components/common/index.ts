@@ -1,5 +1,6 @@
 export { EmptyState } from './EmptyState';
 export { ErrorState } from './ErrorState';
+export { ErrorBoundary } from './ErrorBoundary';
 export { LoadingState, LoadingOverlay } from './LoadingState';
 export { SearchBar } from './SearchBar';
 export { Header } from './Header';

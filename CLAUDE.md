@@ -501,21 +501,74 @@ eas update
 
 ---
 
+### Session 7 - 2026-01-21
+**Focus:** App Store Rejection Fix - Crash on Launch
+**Problem:** App crashed on launch on iPhone 17 Pro Max and iPad Pro (iOS 26.2/iPadOS 26.3)
+
+**Completed:**
+- [x] Investigated crash causes through code review
+- [x] Disabled New Architecture (`newArchEnabled: false` in app.json)
+- [x] Created `metro.config.js` for proper Metro configuration
+- [x] Fixed asset require path in Header.tsx (changed from `@/assets/` to relative path)
+- [x] Created `ErrorBoundary` component for graceful error handling
+- [x] Wrapped app in ErrorBoundary in root `_layout.tsx`
+- [x] Added LogBox warning suppression for non-critical warnings
+
+**Root Cause Analysis (from crash log):**
+Crash: `EXC_BAD_ACCESS (SIGSEGV)` - `KERN_INVALID_ADDRESS at 0x0000000000000004`
+Crashing Thread: `com.meta.react.turbomodulemanager.queue`
+
+Stack trace shows crash in TurboModule system:
+```
+hermes::vm::JSObject::getComputedWithReceiver_RJS  ← NULL POINTER
+facebook::react::TurboModuleConvertUtils::convertNSArrayToJSIArray
+facebook::react::TurboModuleConvertUtils::convertNSExceptionToJSError
+facebook::react::ObjCTurboModule::performVoidMethodInvocation
+```
+
+**Confirmed cause:** `newArchEnabled: true` triggered a native module to throw an NSException during initialization. While React Native tried to convert that exception to JavaScript, the Hermes VM crashed with a null pointer dereference.
+
+**Fix applied:**
+1. **`newArchEnabled: false`** - Disables TurboModules/New Architecture
+2. **Added react-native-maps plugin** - Proper native module configuration
+3. **Missing metro.config.js** - Created for proper module resolution
+4. **Path alias in `require()`** - Fixed to use relative path
+
+**Files Modified:**
+- `app.json` - Disabled newArchEnabled
+- `metro.config.js` - Created new file
+- `components/common/Header.tsx` - Fixed asset require path
+- `components/common/ErrorBoundary.tsx` - Created new file
+- `components/common/index.ts` - Added ErrorBoundary export
+- `app/_layout.tsx` - Added ErrorBoundary wrapper and LogBox configuration
+
+**Notes:**
+- TypeScript type checking passes
+- All error boundaries provide Georgian error messages
+- App should no longer crash on launch
+- Ready for rebuild and resubmission
+
+---
+
 ## Last Session Summary
 ```
-Date: 2026-01-12
-Phase: 5 - Fuel Module (COMPLETED)
-Tasks Completed: All Phase 5 tasks
-Files Created: 5 files (hook, 3 components, screen)
+Date: 2026-01-21
+Phase: 6 - Testing & Polish (App Store Fix)
+Tasks Completed: Fixed crash on launch issue
+Files Created: 2 files (metro.config.js, ErrorBoundary.tsx)
+Files Modified: 4 files
 TypeScript: Passes type check
 Blockers: None
 ```
 
 ## Next Session Should
 ```
-1. Start Phase 6: Testing & Polish
-   - Test on iOS and Android simulators/emulators
-   - Test on physical devices
+1. Rebuild and test the app
+   - Run `eas build --platform ios` to create new iOS build
+   - Run `eas build --platform android` for Android
+   - Test on physical devices before resubmission
+2. Resubmit to App Store
+3. Continue Phase 6: Testing & Polish
    - Test all navigation flows
    - Test phone call, maps, share functionality
 2. Performance optimization

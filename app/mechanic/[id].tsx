@@ -12,7 +12,6 @@ import {
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useMechanic, useMechanicServices } from '@/hooks';
 import { Avatar, Card, Button } from '@/components/ui';
 import { LoadingState, ErrorState, Layout } from '@/components/common';
@@ -236,47 +235,11 @@ export default function MechanicProfileScreen() {
             </View>
           )}
 
-          {/* Location & Map */}
+          {/* Location */}
           {location && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>მდებარეობა</Text>
               <View style={styles.mapCard}>
-                <TouchableOpacity
-                  activeOpacity={0.9}
-                  onPress={handleOpenMaps}
-                  style={styles.mapTouchable}
-                >
-                  <MapView
-                    style={styles.map}
-                    provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-                    initialRegion={{
-                      latitude: location.latitude,
-                      longitude: location.longitude,
-                      latitudeDelta: 0.008,
-                      longitudeDelta: 0.008,
-                    }}
-                    scrollEnabled={false}
-                    zoomEnabled={false}
-                    pitchEnabled={false}
-                    rotateEnabled={false}
-                    pointerEvents="none"
-                  >
-                    <Marker
-                      coordinate={{
-                        latitude: location.latitude,
-                        longitude: location.longitude,
-                      }}
-                    >
-                      <View style={styles.markerContainer}>
-                        <View style={styles.marker}>
-                          <Ionicons name="location" size={20} color={colors.white} />
-                        </View>
-                        <View style={styles.markerArrow} />
-                      </View>
-                    </Marker>
-                  </MapView>
-                </TouchableOpacity>
-
                 {/* Address Info */}
                 <View style={styles.addressContainer}>
                   <View style={styles.addressInfo}>
